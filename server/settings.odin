@@ -36,14 +36,14 @@ Settings :: struct {
 settings_default :: proc() -> Settings {
 	return {
 		base          = ".",
-		maps          = "ctf_Ash",
+		maps          = "ctf_Guardian",
 		port          = 23073,
 		time_limit    = f32(sim.DEFAULT_TIME_LIMIT) / sim.TICK_RATE / 60,
 		score_limit   = int(sim.DEFAULT_SCORE_LIMIT),
 		respawn       = f32(sim.DEFAULT_RESPAWN_TIME) / sim.TICK_RATE,
 		grenades      = int(sim.DEFAULT_MAX_GRENADES),
-		kits_collide  = true,
-		bots_difficulty = 100,
+		kits_collide  = false,
+		bots_difficulty = 250,
 		bots_chat     = true,
 		vote_percent  = 60,
 		max_rewind    = 300,
