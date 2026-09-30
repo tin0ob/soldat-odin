@@ -234,6 +234,15 @@ receive_end :: proc(g: ^Game, e: ^net.End) {
 	}
 }
 
+// A flag the server sent home moves there now: a returned flag changes nothing the
+// things diff sends (a flag never rests), so without this it stays drawn where it fell.
+flag_go_home :: proc(g: ^Game, flag: sim.Thing_Style) {
+	home := g.world.flag_home[flag == .Alpha_Flag ? 0 : 1]
+	for &t in g.world.things {
+		if t.style == flag do sim.thing_place(&g.ctx, &t, t.style, home)
+	}
+}
+
 // What the server decided. It sounds and shows like anything else that happened. A
 // placing of a soldier begins its next life here, mine or another's, unless an update
 // has told of that life already; and what a pickup gives me of the things that are mine
@@ -256,6 +265,8 @@ receive_fact :: proc(g: ^Game, e: sim.Event) {
 			mine.weapon = sim.weapon_state(&g.ctx, v.weapon)
 			mine.weapon.ammo = v.ammo
 		}
+	case sim.Flag_Return: flag_go_home(g, v.flag)
+	case sim.Flag_Score:  flag_go_home(g, v.flag)
 	}
 }
 
