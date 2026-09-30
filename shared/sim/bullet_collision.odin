@@ -320,6 +320,7 @@ soldier_collide_bullet :: proc(ctx: ^Context, w: ^World, b: ^Bullet, index: u16,
 			bullet_end(w, b, index, events, point)
 		case .Frag_Grenade:
 			if corpse do continue // grenades roll through corpses
+			b.pos = point // explode where the nade touched, not where it was last tick
 			explode(ctx, w, b, index, .Frag, ti, part, events)
 			bullet_end(w, b, index, events)
 		case .Arrow:
@@ -330,8 +331,8 @@ soldier_collide_bullet :: proc(ctx: ^Context, w: ^World, b: ^Bullet, index: u16,
 			bullet_end(w, b, index, events, point)
 		case .M79, .Flame_Arrow, .LAW:
 			if corpse do continue // rockets fly through corpses
+			b.pos = point // explode where the rocket touched, not where it was last tick
 			explode(ctx, w, b, index, .M79, ti, part, events)
-			b.pos = point
 			bullet_end(w, b, index, events)
 			wound(events, b, ti, vec2_length(b.vel) * b.hit_multiply, part, point, push)
 		case .Flame:

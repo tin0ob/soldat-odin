@@ -1,5 +1,7 @@
 package sim
 
+import "core:fmt"
+
 // A grenade, rocket or cluster going off: a Hit on every living soldier in the
 // radius (the caller wounds), the things knocked, nearby explosives set off.
 // Ported from explode() in Bullets.pas by way of the old Odin port.
@@ -54,8 +56,16 @@ explode :: proc(ctx: ^Context, w: ^World, b: ^Bullet, index: u16, kind: Explosio
 		a *= (1 / (dist + 1)) * EXPLOSION_IMPACT_MULTIPLY
 		if kind == .Cluster do modifier *= 0.5
 		else do a.y *= 2
+		// the wound reads the distance to the player position, as the push does: a nade
+		// in the legs is near the feet and kills, a head or torso blast only wounds. A
+		// frag that touched a leg explodes at the contact point (bullet_collision) and
+		// is pinned to the hitbox edge, so it always kills, like the original.
+		wound_dist := i == hit_soldier && part <= 4 ? min(dist, PART_RADIUS + 1) : dist
 		if s.cease_fire_counter < 0 {
-			emit(events, Hit{shooter = b.owner, target = u8(i), weapon = b.weapon, amount = (1 / (dist + 1)) * info.damage * modifier, part = 0, pos = pose[part], push = -a})
+			amount := (1 / (wound_dist + 1)) * info.damage * modifier
+			// debug: the wound math, server-side only (remove after tuning)
+			if w.authority do fmt.printfln("boom %v slot %d: blast %.1f away, part %d mod %.2f -> %.0f (hp %.0f)", weapon, i, dist, part, modifier, amount, s.health)
+			emit(events, Hit{shooter = b.owner, target = u8(i), weapon = b.weapon, amount = amount, part = 0, pos = pose[part], push = -a})
 		}
 	}
 

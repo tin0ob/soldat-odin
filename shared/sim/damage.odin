@@ -1,5 +1,7 @@
 package sim
 
+import "core:fmt"
+
 // The one place health changes. A Hit becomes a wound here: the vest and berserker
 // rules, the helmet, then death. Port of shared/sim/damage.lua.
 
@@ -10,7 +12,12 @@ damage_apply :: proc(ctx: ^Context, w: ^World, hit: Hit, events: ^Events) {
 	s := &w.soldiers[hit.target]
 	if !s.active do return
 	attacker := &w.soldiers[hit.shooter]
-	if !w.round.friendly_fire && s.team != .None && s.team == attacker.team && hit.target != hit.shooter do return
+	// friendly fire off: a teammate takes no wound, but an explosion still shoves them,
+	// so teammates can be boosted like in the original
+	if !w.round.friendly_fire && s.team != .None && s.team == attacker.team && hit.target != hit.shooter {
+		if hit.weapon == .Frag || hit.weapon == .Cluster || hit.weapon == .M79 || hit.weapon == .LAW do s.next_push += hit.push
+		return
+	}
 	if s.bonus == .Flame_God do return
 
 	// HealthHit on a corpse: the wound lands and nothing else does. No knockback, no
@@ -34,6 +41,9 @@ damage_apply :: proc(ctx: ^Context, w: ^World, hit: Hit, events: ^Events) {
 
 	s.health = clamp(s.health - amount, BRUTAL_DEATH_HEALTH, DEFAULT_HEALTH)
 	s.next_push += hit.push
+	// debug: the wound as applied, server-side only (the client never calls
+	// damage_apply). Remove after tuning.
+	if hit.weapon == .Frag || hit.weapon == .Cluster || hit.weapon == .M79 || hit.weapon == .LAW do fmt.printfln("wound slot %d %v: %.0f raw -> %.0f applied (vest %v) hp %.0f%s", hit.target, hit.weapon, hit.amount, amount, vested, s.health, s.health < 1 ? " DEAD" : "")
 	emit(events, Damage{attacker = hit.shooter, target = hit.target, weapon = hit.weapon, amount = amount, vest = vested})
 	if s.health < 1 do die(ctx, w, hit, events)
 }
