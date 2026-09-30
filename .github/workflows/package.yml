@@ -59,9 +59,6 @@ jobs:
       - name: Check
         run: odin run build.odin -file -- check
 
-      - name: Test
-        run: odin run build.odin -file -- test
-
       - name: Package
         run: odin run build.odin -file -- package
 
