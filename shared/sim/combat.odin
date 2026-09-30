@@ -84,6 +84,9 @@ combat_control :: proc(ctx: ^Context, w: ^World, index: u8, events: ^Events) {
 
 	if body.id != .Roll && body.id != .Roll_Back && body.id != .Change && body.id != .Throw_Weapon && .Drop in s.controls && weapon.id != .None {
 		anim_apply(anims, body, .Throw_Weapon)
+		// the knife winds up at Control.pas's Speed 2: two ticks per frame, so its
+		// sixteen charge frames take twice as long as the gun's throw
+		if weapon.id == .Knife do body.speed = 2
 	}
 
 	// manual reload
@@ -120,12 +123,33 @@ combat_control :: proc(ctx: ^Context, w: ^World, index: u8, events: ^Events) {
 	}
 	if body.id == .Change && body.frame == anims[.Change].num_frames && weapon.ammo == 0 do anim_apply(anims, body, .Stand)
 
-	// the gun leaves the hand at frame 19 of the throw
-	if body.id == .Throw_Weapon && body.frame == 19 && weapon.id != .None {
+	// the gun leaves the hand at frame 19 of the throw; the knife never does — it
+	// keeps winding and is thrown below (Control.pas guards the frame-19 drop too)
+	if body.id == .Throw_Weapon && body.frame == 19 && weapon.id != .None && weapon.id != .Knife {
 		dropped_gun_throw(ctx, w, index, s, weapon.id, weapon.ammo, events)
 		s.weapon = weapon_state(ctx, .None)
 		weapon = &s.weapon
 		info = &ctx.weapons[.None]
+	}
+
+	// the knife is thrown, not dropped, like Control.pas: the button lets go and the
+	// knife flies with the momentum the wind-up had reached — a tap is half the throw
+	// — or the hold itself throws at frame 16 (two ticks a frame at Speed 2, so a
+	// full wind-up is 32 ticks). The charge is D, the frame clamped between 8 and 16
+	// over 16; the aim leaves the hand, Control.pas's GetCursorAimDirection, and the
+	// 1.5 is Control.pas's Speed * 1.5.
+	if body.id == .Throw_Weapon && weapon.id == .Knife && (.Drop not_in s.controls || body.frame == 16) {
+		pose := soldier_pose(anims, s, s.pos)
+		dir := vec2_normalize(s.aim - pose[14])
+		if dir == {} do dir = {f32(s.direction), 0}
+		thrown := &ctx.weapons[.Thrown_Knife]
+		charge := clamp(f32(body.frame), 8, 16) / 16
+		vel := dir * (thrown.speed * 1.5 * charge) + s.vel * thrown.inherit
+		bullet_spawn(ctx, w, pose[15], vel, .Thrown_Knife, index, thrown.damage, events)
+		s.weapon = weapon_state(ctx, .None)
+		weapon = &s.weapon
+		info = &ctx.weapons[.None]
+		anim_apply(anims, body, .Stand)
 	}
 
 	// the punch or stab

@@ -54,9 +54,16 @@ dropped_gun_from_death :: proc(ctx: ^Context, w: ^World, index: u8, s: ^Soldier,
 	dropped_gun_create(ctx, w, s.weapon.id, index, pose[15], true, impact, s.weapon.ammo, events)
 }
 
-// A thrown knife that stopped lands as a knife to pick up, a step back from where.
-dropped_gun_land_knife :: proc(w: ^World, b: ^Bullet) {
-	// TODO needs the context for the skeleton: thing_create(ctx, w, .Weapon, b.pos - b.vel, .Knife)
+// A thrown knife that stopped lands as a knife to pick up; the caller hands the
+// position already pulled back out of the wall it stopped against.
+dropped_gun_land_knife :: proc(ctx: ^Context, w: ^World, owner: u8, pos, vel: Vec2) {
+	index, ok := thing_create(ctx, w, .Weapon, pos, .Knife)
+	if !ok do return
+	t := &w.things[index]
+	t.owner = owner + 1
+	t.timeout = GUN_RESIST_TIME
+	t.flip = vel.x < 0
+	t.ammo = ctx.weapons[.Knife].ammo
 }
 
 // May this soldier take it: with empty hands, near, once the gun has lain long enough.
