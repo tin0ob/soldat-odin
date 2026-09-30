@@ -111,7 +111,7 @@ map_collide :: proc(ctx: ^Context, w: ^World, b: ^Bullet, index: u16, at: Vec2, 
 			case .Thrown_Knife:
 				b.pos = pos - b.vel
 				emit(events, Wall_Hit{id = index, owner = b.owner, weapon = b.weapon, pos = pos, vel = b.vel})
-				dropped_gun_land_knife(w, b)
+				dropped_gun_land_knife(ctx, w, b.owner, b.pos, b.vel)
 				bullet_end(w, b, index, events, pos)
 			}
 			return pos
@@ -176,7 +176,7 @@ collider_collide :: proc(ctx: ^Context, w: ^World, b: ^Bullet, index: u16, neare
 		case .Plain, .Shotgun, .Punch, .Knife, .Thrown_Knife, .M2:
 			b.pos = p - b.vel
 			emit(events, Collider_Hit{id = index, owner = b.owner, pos = p, vel = b.vel})
-			if b.style == .Thrown_Knife do dropped_gun_land_knife(w, b)
+			if b.style == .Thrown_Knife do dropped_gun_land_knife(ctx, w, b.owner, b.pos, b.vel)
 			bullet_end(w, b, index, events, p)
 		case .Frag_Grenade:
 			// not stopped by cover it was thrown from right next to
@@ -352,6 +352,8 @@ soldier_collide_bullet :: proc(ctx: ^Context, w: ^World, b: ^Bullet, index: u16,
 		case .Thrown_Knife:
 			wound(events, b, ti, vec2_length(b.vel) * b.hit_multiply * 0.01, part, point, push)
 			if corpse do continue // a thrown knife goes through a corpse rather than sticking in it
+			// the knife falls where the soldier it struck stands, to be picked up
+			dropped_gun_land_knife(ctx, w, b.owner, point, b.vel)
 			bullet_end(w, b, index, events)
 		}
 		return point, true
