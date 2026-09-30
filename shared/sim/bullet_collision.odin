@@ -320,8 +320,9 @@ soldier_collide_bullet :: proc(ctx: ^Context, w: ^World, b: ^Bullet, index: u16,
 			bullet_end(w, b, index, events, point)
 		case .Frag_Grenade:
 			if corpse do continue // grenades roll through corpses
+			shove_pos := b.pos // the shove keeps the position a tick back on the path, as the original pushed from
 			b.pos = point // explode where the nade touched, not where it was last tick
-			explode(ctx, w, b, index, .Frag, ti, part, events)
+			explode(ctx, w, b, index, .Frag, ti, part, events, shove_pos)
 			bullet_end(w, b, index, events)
 		case .Arrow:
 			b.pos = point - b.vel
@@ -331,8 +332,9 @@ soldier_collide_bullet :: proc(ctx: ^Context, w: ^World, b: ^Bullet, index: u16,
 			bullet_end(w, b, index, events, point)
 		case .M79, .Flame_Arrow, .LAW:
 			if corpse do continue // rockets fly through corpses
+			shove_pos := b.pos // as above: the boost keeps the position a tick back on the rocket's path
 			b.pos = point // explode where the rocket touched, not where it was last tick
-			explode(ctx, w, b, index, .M79, ti, part, events)
+			explode(ctx, w, b, index, .M79, ti, part, events, shove_pos)
 			bullet_end(w, b, index, events)
 			wound(events, b, ti, vec2_length(b.vel) * b.hit_multiply, part, point, push)
 		case .Flame:

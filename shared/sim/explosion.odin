@@ -15,7 +15,10 @@ EXPLOSION_IMPACT_MULTIPLY :: 3.75
 Explosion_Kind :: enum u8 { Frag, M79, Cluster }
 
 // `hit_soldier` and `hit_part` name a soldier the projectile struck directly, or -1.
-explode :: proc(ctx: ^Context, w: ^World, b: ^Bullet, index: u16, kind: Explosion_Kind, hit_soldier, hit_part: int, events: ^Events) {
+// A direct hit passes `push_anchor`, the bullet's pre-move position: the explosion sits
+// at the contact point for an honest kill, but the original shoves the struck player
+// from where the explosion was on the path, a tick back — the boost's feel.
+explode :: proc(ctx: ^Context, w: ^World, b: ^Bullet, index: u16, kind: Explosion_Kind, hit_soldier, hit_part: int, events: ^Events, push_anchor: Vec2 = {}) {
 	weapon: Weapon_Id
 	radius: f32
 	switch kind {
@@ -42,29 +45,35 @@ explode :: proc(ctx: ^Context, w: ^World, b: ^Bullet, index: u16, kind: Explosio
 				if d := vec2_dot(b.pos - pose[p], b.pos - pose[p]); d < best do best, part = d, p
 			}
 		}
-    // boost itself is calculated from player's position itself, not the nearest part.
-    // damage multiplier was not modified
-    // tested with bots and also the boost on some maps feel the same: 
-    // rotten double nade + m79 boost from flagspot
+    // the boost is measured from the nearest body part, as opensoldat's ExplosionHit
+    // does: a nade at the feet shoves sideways from the leg it is nearest to, not
+    // straight up from the hips. (The player-position anchor from Phase 1 launches
+    // ~7 vertical at almost any distance; the human asked to match opensoldat,
+    // 2026-09-30.)
+    // test spots: rotten double nade + m79 boost from flagspot
     // rotten low route horizontal bridge boost
     // ash double nade boost from flag spot into tunnel
-		a := b.pos - s.pos
-		dist2 := vec2_dot(a, a)
+		// the wound reads the distance to the player position: a nade in the legs is
+		// near the feet and kills, a head or torso blast only wounds. A frag that
+		// touched a leg explodes at the contact point (bullet_collision) and is pinned
+		// to the hitbox edge, so it always kills, like the original.
+		b2s := b.pos - s.pos
+		dist2 := vec2_dot(b2s, b2s)
 		if dist2 >= radius * radius do continue
 		dist := sqrt_f32(dist2)
 		modifier := hitbox_modifier(info, part)
-		a *= (1 / (dist + 1)) * EXPLOSION_IMPACT_MULTIPLY
+		wound_dist := i == hit_soldier && part <= 4 ? min(dist, PART_RADIUS + 1) : dist
+		// the push is opensoldat's: measured from the nearest body part and scaled by
+		// its distance, so a nade at the feet shoves sideways from the leg, not up
+		a := (push_anchor == {} ? b.pos : push_anchor) - pose[part]
+		part_dist := sqrt_f32(vec2_dot(a, a))
+		a *= (1 / (part_dist + 1)) * EXPLOSION_IMPACT_MULTIPLY
 		if kind == .Cluster do modifier *= 0.5
 		else do a.y *= 2
-		// the wound reads the distance to the player position, as the push does: a nade
-		// in the legs is near the feet and kills, a head or torso blast only wounds. A
-		// frag that touched a leg explodes at the contact point (bullet_collision) and
-		// is pinned to the hitbox edge, so it always kills, like the original.
-		wound_dist := i == hit_soldier && part <= 4 ? min(dist, PART_RADIUS + 1) : dist
 		if s.cease_fire_counter < 0 {
 			amount := (1 / (wound_dist + 1)) * info.damage * modifier
 			// debug: the wound math, server-side only (remove after tuning)
-			if w.authority do fmt.printfln("boom %v slot %d: blast %.1f away, part %d mod %.2f -> %.0f (hp %.0f)", weapon, i, dist, part, modifier, amount, s.health)
+			if w.authority do fmt.printfln("boom %v slot %d: blast %.1f away (part %.1f), part %d mod %.2f -> %.0f push (%.1f %.1f) (hp %.0f)", weapon, i, dist, part_dist, part, modifier, amount, -a.x, -a.y, s.health)
 			emit(events, Hit{shooter = b.owner, target = u8(i), weapon = b.weapon, amount = amount, part = 0, pos = pose[part], push = -a})
 		}
 	}
