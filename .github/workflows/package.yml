@@ -59,6 +59,9 @@ jobs:
       - name: Check
         run: odin run build.odin -file -- check
 
+      - name: Test
+        run: odin run build.odin -file -- test
+
       - name: Package
         run: odin run build.odin -file -- package
 
@@ -94,19 +97,9 @@ jobs:
       - name: Release
         env:
           GH_TOKEN: ${{ github.token }}
-        # The notes are the tag's message below its first line, read through the API:
-        # this job has no clone to read the tag from. A lightweight tag carries no
-        # message of its own, so its commit's is used. If the release already exists
-        # (the tag pushed twice, or made by hand), the archives go onto it instead.
+        # the notes are the tag's message below its first line, read through the API: this job
+        # has no clone to read the tag from
         run: |
-          set -o pipefail
-          ref="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$GITHUB_REF_NAME" --jq .object)"
-          type="$(printf '%s' "$ref" | jq -r .type)"
-          sha="$(printf '%s' "$ref" | jq -r .sha)"
-          case "$type" in
-            tag)    gh api "repos/$GITHUB_REPOSITORY/git/tags/$sha" --jq .message ;;
-            commit) gh api "repos/$GITHUB_REPOSITORY/git/commits/$sha" --jq .commit.message ;;
-          esac | tail -n +3 > notes.md
-          if ! gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --notes-file notes.md --verify-tag; then
-            gh release upload "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --clobber
-          fi
+          sha="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$GITHUB_REF_NAME" --jq .object.sha)"
+          gh api "repos/$GITHUB_REPOSITORY/git/tags/$sha" --jq .message | tail -n +3 > notes.md
+          gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --notes-file notes.md --verify-tag
