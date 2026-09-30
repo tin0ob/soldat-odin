@@ -3,8 +3,8 @@ package sim
 import "core:strings"
 
 // The weapons: names, how they reload and fire, and the balance numbers. The defaults
-// are Soldat 1.7.1's, which is also OpenSoldat's built-in table; a server's weapons
-// mod overrides them. Ported from Weapons.pas by way of the old Odin port.
+// are GatherWM 1.7.1v10, the Soldat Discord's weapon mod, loaded verbatim from its
+// weapons.ini. Ported from Weapons.pas by way of the old Odin port.
 
 Weapon_Id :: enum u8 {
 	None, Eagle, MP5, AK74, Steyr, Spas, Ruger, M79, Barrett, M249, Minigun,
@@ -102,31 +102,32 @@ Weapon_Stats :: struct {
 	mod_head, mod_chest, mod_legs: f32,
 }
 
-// Soldat 1.7.1. The cluster grenade, cluster and thrown knife derive from the frag
-// grenade and the knife in weapons_finalize.
+// GatherWM 1.7.1v10, the Soldat Discord's weapon mod, its weapons.ini verbatim. The
+// cluster grenade, cluster and thrown knife derive from the frag grenade and the
+// knife in weapons_finalize.
 @(rodata)
 WEAPON_DEFAULTS := #partial [Weapon_Id]Weapon_Stats{
-	//          damage  fire ammo reload speed  style          startup bink moveacc  spread push     inherit head  chest legs
-	.Eagle   = {1.81,   24,  7,   87,    19,    .Plain,        0,      0,   0.009,   0.15,  0.0176,  0.5,    1.1,  0.95, 0.85},
-	.MP5     = {1.01,   6,   30,  105,   18.9,  .Plain,        0,      0,   0,       0.14,  0.0112,  0.5,    1.1,  0.95, 0.85},
-	.AK74    = {1.004,  10,  35,  165,   24.6,  .Plain,        0,      -12, 0.011,   0.025, 0.01376, 0.5,    1.1,  0.95, 0.85},
-	.Steyr   = {0.71,   7,   25,  125,   26,    .Plain,        0,      0,   0,       0.075, 0.0084,  0.5,    1.1,  0.95, 0.85},
-	.Spas    = {1.22,   32,  7,   175,   14,    .Shotgun,      0,      0,   0,       0.8,   0.0188,  0.5,    1.1,  0.95, 0.85},
-	.Ruger   = {2.49,   45,  4,   78,    33,    .Plain,        0,      0,   0.03,    0,     0.012,   0.5,    1.2,  1.05, 1.0},
-	.M79     = {1550,   6,   1,   178,   10.7,  .M79,          0,      0,   0,       0,     0.036,   0.5,    1.15, 1,    0.9},
-	.Barrett = {4.45,   225, 10,  70,    55,    .Plain,        19,     65,  0.05,    0,     0.018,   0.5,    1.0,  1.0,  1.0},
-	.M249    = {0.85,   9,   50,  250,   27,    .Plain,        0,      0,   0.013,   0.064, 0.0128,  0.5,    1.1,  0.95, 0.85},
-	.Minigun = {0.468,  3,   100, 480,   29,    .Plain,        25,     0,   0.0625,  0.3,   0.0104,  0.5,    1.1,  0.95, 0.85},
-	.Colt    = {1.49,   10,  14,  60,    18,    .Plain,        0,      0,   0,       0,     0.02,    0.5,    1.1,  0.95, 0.85},
-	.Knife   = {2150,   6,   1,   3,     6,     .Knife,        0,      0,   0,       0,     0.12,    0,      1.15, 1,    0.9},
-	.Chainsaw = {50,    2,   200, 110,   8,     .Knife,        0,      0,   0,       0,     0.0028,  0,      1.15, 1.0,  0.9},
-	.LAW     = {1550,   6,   1,   300,   23,    .LAW,          13,     0,   0,       0,     0.028,   0.5,    1.15, 1.0,  0.9},
-	.Bow2    = {8,      10,  1,   39,    18,    .Flame_Arrow,  0,      0,   0,       0,     0,       0.5,    1.15, 1,    0.9},
-	.Bow     = {12,     10,  1,   25,    21,    .Arrow,        0,      0,   0,       0,     0.0148,  0.5,    1.15, 1,    0.9},
-	.Flamer  = {19,     6,   200, 5,     10.5,  .Flame,        0,      0,   0,       0,     0.016,   0.5,    1.15, 1,    0.9},
-	.M2      = {1.8,    10,  100, 366,   36,    .M2,           0,      0,   0,       0,     0.0088,  0,      1.1,  0.95, 0.85},
-	.None    = {330,    6,   1,   3,     5,     .Punch,        0,      0,   0,       0,     0,       0,      1.15, 1,    0.9},
-	.Frag    = {1500,   80,  1,   20,    5,     .Frag_Grenade, 0,      0,   0,       0,     0,       1,      1.0,  1.0,  1.0},
+	//          damage  fire  ammo  reload speed   style          startup bink   moveacc  spread  push      inherit head   chest  legs
+	.Eagle   = {1.65,   23,    7,    70,    19,     .Plain,        0,      0,      0,       0.10,    0.023,    0.5,    1.03,   1.0,    0.99},
+	.MP5     = {1.01,   6,     30,   88,    18.5,   .Plain,        0,      0,      0,       0.145,   0.0114,   0.5,    1.02,   0.95,   0.9},
+	.AK74    = {1.007,  10,    35,   150,   25.250, .Plain,        0,      0,      0.009,   0.020,   0.01379,  0.5,    1.0,    0.89,   0.79},
+	.Steyr   = {0.684,  7,     25,   88,    26.5,   .Plain,        0,      0,      0,       0.064,   0.0086,   0.5,    1.0,    0.92,   0.82},
+	.Spas    = {1.11,   33,    7,    175,   14,     .Shotgun,      0,      0,      0,       0.8,     0.0188,   0.5,    1.04,   1.0,    0.94},
+	.Ruger   = {2.87,   56,    3,    66,    31,     .Plain,        0,      0,      0.0156,  0,       0.0195,   0.5,    1.005,  1.005,  1},
+	.M79     = {1550,   6,     1,    180,   10.7,   .M79,          0,      0,      0,       0,       0.036,    0.5,    1.15,   1,      0.9},
+	.Barrett = {4.45,   230,   10,   100,   55,     .Plain,        19,     73,     0.05,    0,       0.018,    0.5,    1.0,    1.0,    1.0},
+	.M249    = {0.85,   9,     50,   170,   27,     .Plain,        0,      0,      0.013,   0.0613,  0.0128,   0.5,    0.98,   0.88,   0.83},
+	.Minigun = {0.468,  3,     100,  480,   29,     .Plain,        25,     0,      0.0625,  0.3,     0.0135,   0.5,    1,      0.92,   0.81},
+	.Colt    = {1.55,   8,     12,   67,    18,     .Plain,        0,      0,      0,       0,       0.02,     0.5,    1.0,    0.90,   0.80},
+	.Knife   = {2310,   6,     1,    3,     6,      .Knife,        0,      0,      0,       0,       0.12,     0,      1.15,   1,      0.98},
+	.Chainsaw = {50,    2,     200,  110,   8,      .Knife,        0,      0,      0,       0,       0.0028,   0,      1.15,   1.0,    0.9},
+	.LAW     = {2150,   6,     1,    260,   23,     .LAW,          11,     0,      0,       0,       0.028,    0.5,    1.15,   1.0,    0.9},
+	.Bow2    = {8,      10,    1,    39,    18,     .Flame_Arrow,  0,      0,      0,       0,       0,        0.5,    1.15,   1,      0.9},
+	.Bow     = {12,     10,    1,    25,    21,     .Arrow,        0,      0,      0,       0,       0.0148,   0.5,    1.15,   1,      0.9},
+	.Flamer  = {19,     6,     200,  5,     10.5,   .Flame,        0,      0,      0,       0,       0.016,    0.5,    1.15,   1,      0.9},
+	.M2      = {1.8,    10,    100,  366,   36,     .M2,           0,      0,      0,       0,       0.0088,   0,      1.1,    0.95,   0.85},
+	.None    = {330,    6,     1,    3,     5,      .Punch,        0,      0,      0,       0,       0,        0,      1.15,   1,      0.9},
+	.Frag    = {1505,   80,    1,    20,    5,      .Frag_Grenade, 0,      0,      0,       0,       0,        1,      1.0,    1.0,    1.0},
 }
 
 // The weapon with this display name, bare hands when there is none.
