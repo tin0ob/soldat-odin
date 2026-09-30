@@ -40,7 +40,13 @@ explode :: proc(ctx: ^Context, w: ^World, b: ^Bullet, index: u16, kind: Explosio
 				if d := vec2_dot(b.pos - pose[p], b.pos - pose[p]); d < best do best, part = d, p
 			}
 		}
-		a := b.pos - pose[part]
+    // boost itself is calculated from player's position itself, not the nearest part.
+    // damage multiplier was not modified
+    // tested with bots and also the boost on some maps feel the same: 
+    // rotten double nade + m79 boost from flagspot
+    // rotten low route horizontal bridge boost
+    // ash double nade boost from flag spot into tunnel
+		a := b.pos - s.pos
 		dist2 := vec2_dot(a, a)
 		if dist2 >= radius * radius do continue
 		dist := sqrt_f32(dist2)
